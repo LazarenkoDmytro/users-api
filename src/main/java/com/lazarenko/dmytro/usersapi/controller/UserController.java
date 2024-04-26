@@ -48,6 +48,23 @@ public class UserController {
         return user;
     }
 
+    @PatchMapping("/{email}")
+    public User updateUser(@RequestBody Map<String, Object> updates, @PathVariable String email) {
+        User user = findUserByEmail(email);
+        updates.forEach((key, value) -> {
+            switch (key) {
+                case "email" -> user.setEmail((String) value);
+                case "firstName" -> user.setFirstName((String) value);
+                case "lastName" -> user.setLastName((String) value);
+                case "dateOfBirth" -> user.setDateOfBirth(LocalDate.parse((String) value));
+                case "address" -> user.setAddress((String) value);
+                case "phoneNumber" -> user.setPhoneNumber((String) value);
+            }
+        });
+
+        return user;
+    }
+
     @ExceptionHandler(DateTimeParseException.class)
     public ResponseEntity<Map<String, Object>> handleDateTimeParseException(HttpServletRequest request) {
         Map<String, Object> errorDetails = new HashMap<>();
