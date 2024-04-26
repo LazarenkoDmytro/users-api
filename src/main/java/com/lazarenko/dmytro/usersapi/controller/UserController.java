@@ -65,6 +65,25 @@ public class UserController {
         return user;
     }
 
+    @PutMapping("/{email}")
+    public User replaceUser(@RequestBody User newUser, @PathVariable String email) {
+        return users.stream()
+                .filter(user -> user.getEmail().equals(email))
+                .findFirst()
+                .map(user -> {
+                    user.setFirstName(newUser.getFirstName());
+                    user.setLastName(newUser.getLastName());
+                    user.setDateOfBirth(newUser.getDateOfBirth());
+                    user.setPhoneNumber(newUser.getPhoneNumber());
+                    user.setAddress(newUser.getAddress());
+                    return user;
+                })
+                .orElseGet(() -> {
+                    users.add(newUser);
+                    return newUser;
+                });
+    }
+
     @ExceptionHandler(DateTimeParseException.class)
     public ResponseEntity<Map<String, Object>> handleDateTimeParseException(HttpServletRequest request) {
         Map<String, Object> errorDetails = new HashMap<>();
