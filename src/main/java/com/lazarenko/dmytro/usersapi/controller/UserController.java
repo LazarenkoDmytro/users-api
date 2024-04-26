@@ -84,6 +84,11 @@ public class UserController {
                 });
     }
 
+    @DeleteMapping("/{email}")
+    public void deleteUser(@PathVariable String email) {
+        users.removeIf(user -> user.getEmail().equals(email));
+    }
+
     @ExceptionHandler(DateTimeParseException.class)
     public ResponseEntity<Map<String, Object>> handleDateTimeParseException(HttpServletRequest request) {
         Map<String, Object> errorDetails = new HashMap<>();
