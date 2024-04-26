@@ -5,7 +5,9 @@ import com.lazarenko.dmytro.usersapi.model.User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 
+import jakarta.validation.constraints.Past;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -87,6 +89,19 @@ public class UserController {
     @DeleteMapping("/{email}")
     public void deleteUser(@PathVariable String email) {
         users.removeIf(user -> user.getEmail().equals(email));
+    }
+
+    @GetMapping("/by-birthdate-range")
+    public List<User> usersByBirthDateRange(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) @Past LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) @Past LocalDate to) {
+        if (from.isAfter(to)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The 'from' date must be before the 'to' date");
+        }
+
+        return users.stream()
+                .filter(user -> (user.getDateOfBirth().isAfter(from) && user.getDateOfBirth().isBefore(to)))
+                .toList();
     }
 
     @ExceptionHandler(DateTimeParseException.class)
