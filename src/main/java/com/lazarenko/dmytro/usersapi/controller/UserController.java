@@ -2,12 +2,15 @@ package com.lazarenko.dmytro.usersapi.controller;
 
 import com.lazarenko.dmytro.usersapi.model.User;
 
+import com.lazarenko.dmytro.usersapi.model.assembler.UserModelAssembler;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-
 import jakarta.validation.constraints.Past;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +24,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 /**
  * The UserController class provides RESTful web services for managing users.
@@ -33,47 +40,64 @@ import java.util.Map;
 @RequestMapping("/users")
 public class UserController {
 
-    private final List<User> users = new ArrayList<>();
+    private final List<User> users;
+
+    private final UserModelAssembler assembler;
 
     @Value("${user.minimum-age}")
     private int minimumAge;
 
-    /**
-     * Retrieves all users.
-     *
-     * @return a list of all users
-     */
-    @GetMapping
-    public List<User> all() {
-        return users;
+    public UserController(UserModelAssembler assembler) {
+        users = new ArrayList<>();
+        this.assembler = assembler;
     }
 
     /**
-     * Retrieves a single user by email.
+     * Retrieves all registered users.
      *
-     * @param email the email of the user to retrieve
-     * @return the user with the specified email
+     * @return CollectionModel of EntityModel containing all users and associated resources
+     */
+    @GetMapping
+    public CollectionModel<EntityModel<User>> all() {
+        List<EntityModel<User>> users = this.users.stream()
+                .map(assembler::toModel)
+                .toList();
+
+        return CollectionModel.of(users, linkTo(methodOn(UserController.class).all()).withSelfRel());
+    }
+
+    /**
+     * Retrieves a user by their email address.
+     *
+     * @param email the email address of the user
+     * @return EntityModel containing the user and associated resources
+     * @throws ResponseStatusException if no user is found with the given email
      */
     @GetMapping("/{email}")
-    public User one(@PathVariable String email) {
-        return findUserByEmail(email);
+    public EntityModel<User> one(@PathVariable String email) {
+        User user = findUserByEmail(email);
+
+        return assembler.toModel(user);
     }
 
     /**
      * Creates a new user with validation for minimum age.
      *
      * @param user the user to create
-     * @return the created user
+     * @return ResponseEntity containing the created user and associated resources
      * @throws ResponseStatusException if the user's age is below the minimum required age
      */
     @PostMapping
-    public User newUser(@Valid @RequestBody User user) {
+    public ResponseEntity<EntityModel<User>> newUser(@Valid @RequestBody User user) {
         if (LocalDate.now().minusYears(minimumAge).isBefore(user.getDateOfBirth())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User must be at least " + minimumAge + " years old");
         }
 
         users.add(user);
-        return user;
+
+        return ResponseEntity
+                .created(linkTo(methodOn(UserController.class).one(user.getEmail())).toUri())
+                .body(assembler.toModel(user));
     }
 
     /**
@@ -81,24 +105,39 @@ public class UserController {
      *
      * @param email   the email of the user to update
      * @param updates a map containing user attributes to update
-     * @return the updated user
-     * @throws ResponseStatusException if no user is found with the given email
+     * @return ResponseEntity containing the updated user and associated resources
+     * @throws ResponseStatusException if no user is found with the given email or if the user's age is below the minimum required age
      */
     @PatchMapping("/{email}")
-    public User updateUser(@PathVariable String email, @RequestBody Map<String, Object> updates) {
+    public ResponseEntity<EntityModel<User>> updateUser(@PathVariable String email, @RequestBody Map<String, Object> updates) {
         User user = findUserByEmail(email);
+        User clone = new User(user);
         updates.forEach((key, value) -> {
             switch (key) {
-                case "email" -> user.setEmail((String) value);
-                case "firstName" -> user.setFirstName((String) value);
-                case "lastName" -> user.setLastName((String) value);
-                case "dateOfBirth" -> user.setDateOfBirth(LocalDate.parse((String) value));
-                case "address" -> user.setAddress((String) value);
-                case "phoneNumber" -> user.setPhoneNumber((String) value);
+                case "email" -> clone.setEmail((String) value);
+                case "firstName" -> clone.setFirstName((String) value);
+                case "lastName" -> clone.setLastName((String) value);
+                case "dateOfBirth" -> {
+                    LocalDate dateOfBirth = LocalDate.parse((String) value);
+                    if (LocalDate.now().minusYears(minimumAge).isBefore(dateOfBirth)) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User must be at least " + minimumAge + " years old");
+                    }
+
+                    clone.setDateOfBirth(dateOfBirth);
+                }
+                case "address" -> clone.setAddress((String) value);
+                case "phoneNumber" -> clone.setPhoneNumber((String) value);
             }
         });
 
-        return user;
+        user.setEmail(clone.getEmail());
+        user.setFirstName(clone.getFirstName());
+        user.setLastName(clone.getLastName());
+        user.setDateOfBirth(clone.getDateOfBirth());
+        user.setAddress(clone.getAddress());
+        user.setPhoneNumber(clone.getPhoneNumber());
+
+        return ResponseEntity.ok(assembler.toModel(user));
     }
 
     /**
@@ -106,11 +145,16 @@ public class UserController {
      *
      * @param email   the email of the user to replace
      * @param newUser the new user data to replace the old one
-     * @return the updated user
+     * @return ResponseEntity containing the replaced user and associated resources
+     * @throws ResponseStatusException if the user's age is below the minimum required age
      */
     @PutMapping("/{email}")
-    public User replaceUser(@PathVariable String email, @RequestBody User newUser) {
-        return users.stream()
+    public ResponseEntity<EntityModel<User>> replaceUser(@PathVariable String email, @Valid @RequestBody User newUser) {
+        if (LocalDate.now().minusYears(minimumAge).isBefore(newUser.getDateOfBirth())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User must be at least " + minimumAge + " years old");
+        }
+
+        User updatedUser = users.stream()
                 .filter(user -> user.getEmail().equals(email))
                 .findFirst()
                 .map(user -> {
@@ -125,16 +169,25 @@ public class UserController {
                     users.add(newUser);
                     return newUser;
                 });
+
+        return ResponseEntity.ok(assembler.toModel(updatedUser));
     }
 
     /**
      * Deletes a user by email.
      *
      * @param email the email of the user to delete
+     * @return ResponseEntity indicating the operation's success
+     * @throws ResponseStatusException if no user is found with the given email
      */
     @DeleteMapping("/{email}")
-    public void deleteUser(@PathVariable String email) {
-        users.removeIf(user -> user.getEmail().equals(email));
+    public ResponseEntity<?> deleteUser(@PathVariable String email) {
+        boolean removed = users.removeIf(user -> user.getEmail().equals(email));
+        if (removed) {
+            return ResponseEntity.noContent().build();
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Could not find user " + email);
+        }
     }
 
     /**
@@ -142,20 +195,23 @@ public class UserController {
      *
      * @param from the start date of the range
      * @param to   the end date of the range
-     * @return a list of users born within the specified range
+     * @return CollectionModel of EntityModel containing users born within the specified range and associated resources
      * @throws ResponseStatusException if the 'from' date is not before the 'to' date
      */
     @GetMapping("/by-birthdate-range")
-    public List<User> usersByBirthDateRange(
+    public CollectionModel<EntityModel<User>> usersByBirthDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) @Past LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) @Past LocalDate to) {
         if (from.isAfter(to)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The 'from' date must be before the 'to' date");
         }
 
-        return users.stream()
+        List<EntityModel<User>> filteredUsers = users.stream()
                 .filter(user -> (user.getDateOfBirth().isAfter(from) && user.getDateOfBirth().isBefore(to)))
-                .toList();
+                .map(assembler::toModel)
+                .collect(Collectors.toList());
+
+        return CollectionModel.of(filteredUsers, linkTo(methodOn(UserController.class).usersByBirthDateRange(from, to)).withSelfRel());
     }
 
     /**
