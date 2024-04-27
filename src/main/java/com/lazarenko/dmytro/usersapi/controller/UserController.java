@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.IanaLinkRelations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -79,22 +80,24 @@ public class UserController {
         return assembler.toModel(user);
     }
 
-
     /**
      * Creates a new user with validation for minimum age.
      *
      * @param user the user to create
-     * @return the created user
+     * @return ResponseEntity containing the created user and associated resources
      * @throws ResponseStatusException if the user's age is below the minimum required age
      */
     @PostMapping
-    public User newUser(@Valid @RequestBody User user) {
+    public ResponseEntity<EntityModel<User>> newUser(@Valid @RequestBody User user) {
         if (LocalDate.now().minusYears(minimumAge).isBefore(user.getDateOfBirth())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User must be at least " + minimumAge + " years old");
         }
 
         users.add(user);
-        return user;
+
+        return ResponseEntity
+                .created(linkTo(methodOn(UserController.class).one(user.getEmail())).toUri())
+                .body(assembler.toModel(user));
     }
 
     /**
