@@ -129,11 +129,11 @@ public class UserController {
      *
      * @param email   the email of the user to replace
      * @param newUser the new user data to replace the old one
-     * @return the updated user
+     * @return ResponseEntity containing the replaced user and associated resources
      */
     @PutMapping("/{email}")
-    public User replaceUser(@PathVariable String email, @RequestBody User newUser) {
-        return users.stream()
+    public ResponseEntity<EntityModel<User>> replaceUser(@PathVariable String email, @RequestBody User newUser) {
+        User updatedUser = users.stream()
                 .filter(user -> user.getEmail().equals(email))
                 .findFirst()
                 .map(user -> {
@@ -148,6 +148,8 @@ public class UserController {
                     users.add(newUser);
                     return newUser;
                 });
+
+        return ResponseEntity.ok(assembler.toModel(updatedUser));
     }
 
     /**
