@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
@@ -174,20 +175,23 @@ public class UserController {
      *
      * @param from the start date of the range
      * @param to   the end date of the range
-     * @return a list of users born within the specified range
+     * @return CollectionModel of EntityModel containing users born within the specified range and associated resources
      * @throws ResponseStatusException if the 'from' date is not before the 'to' date
      */
     @GetMapping("/by-birthdate-range")
-    public List<User> usersByBirthDateRange(
+    public CollectionModel<EntityModel<User>> usersByBirthDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) @Past LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) @Past LocalDate to) {
         if (from.isAfter(to)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The 'from' date must be before the 'to' date");
         }
 
-        return users.stream()
+        List<EntityModel<User>> filteredUsers = users.stream()
                 .filter(user -> (user.getDateOfBirth().isAfter(from) && user.getDateOfBirth().isBefore(to)))
-                .toList();
+                .map(assembler::toModel)
+                .collect(Collectors.toList());
+
+        return CollectionModel.of(filteredUsers, linkTo(methodOn(UserController.class).usersByBirthDateRange(from, to)).withSelfRel());
     }
 
     /**
