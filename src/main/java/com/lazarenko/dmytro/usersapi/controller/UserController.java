@@ -156,10 +156,17 @@ public class UserController {
      * Deletes a user by email.
      *
      * @param email the email of the user to delete
+     * @return ResponseEntity indicating the operation's success
+     * @throws ResponseStatusException if no user is found with the given email
      */
     @DeleteMapping("/{email}")
-    public void deleteUser(@PathVariable String email) {
-        users.removeIf(user -> user.getEmail().equals(email));
+    public ResponseEntity<?> deleteUser(@PathVariable String email) {
+        boolean removed = users.removeIf(user -> user.getEmail().equals(email));
+        if (removed) {
+            return ResponseEntity.noContent().build();
+        } else {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Could not find user " + email);
+        }
     }
 
     /**
