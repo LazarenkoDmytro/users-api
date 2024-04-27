@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Past;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 /**
  * The UserController class provides RESTful web services for managing users.
@@ -48,13 +52,17 @@ public class UserController {
     }
 
     /**
-     * Retrieves all users.
+     * Retrieves all registered users.
      *
-     * @return a list of all users
+     * @return CollectionModel of EntityModel containing all users and associated resources
      */
     @GetMapping
-    public List<User> all() {
-        return users;
+    public CollectionModel<EntityModel<User>> all() {
+        List<EntityModel<User>> users = this.users.stream()
+                .map(assembler::toModel)
+                .toList();
+
+        return CollectionModel.of(users, linkTo(methodOn(UserController.class).all()).withSelfRel());
     }
 
     /**
@@ -62,6 +70,7 @@ public class UserController {
      *
      * @param email the email address of the user
      * @return EntityModel containing the user and associated resources
+     * @throws ResponseStatusException if no user is found with the given email
      */
     @GetMapping("/{email}")
     public EntityModel<User> one(@PathVariable String email) {
