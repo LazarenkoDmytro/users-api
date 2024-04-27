@@ -2,12 +2,14 @@ package com.lazarenko.dmytro.usersapi.controller;
 
 import com.lazarenko.dmytro.usersapi.model.User;
 
+import com.lazarenko.dmytro.usersapi.model.assembler.UserModelAssembler;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-
 import jakarta.validation.constraints.Past;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -33,10 +35,17 @@ import java.util.Map;
 @RequestMapping("/users")
 public class UserController {
 
-    private final List<User> users = new ArrayList<>();
+    private final List<User> users;
+
+    private final UserModelAssembler assembler;
 
     @Value("${user.minimum-age}")
     private int minimumAge;
+
+    public UserController(UserModelAssembler assembler) {
+        users = new ArrayList<>();
+        this.assembler = assembler;
+    }
 
     /**
      * Retrieves all users.
@@ -49,15 +58,18 @@ public class UserController {
     }
 
     /**
-     * Retrieves a single user by email.
+     * Retrieves a user by their email address.
      *
-     * @param email the email of the user to retrieve
-     * @return the user with the specified email
+     * @param email the email address of the user
+     * @return EntityModel containing the user and associated resources
      */
     @GetMapping("/{email}")
-    public User one(@PathVariable String email) {
-        return findUserByEmail(email);
+    public EntityModel<User> one(@PathVariable String email) {
+        User user = findUserByEmail(email);
+
+        return assembler.toModel(user);
     }
+
 
     /**
      * Creates a new user with validation for minimum age.
