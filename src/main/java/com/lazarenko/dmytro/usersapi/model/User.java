@@ -14,6 +14,17 @@ import java.time.LocalDate;
  * @author Dmytro Lazarenko
  */
 public class User {
+    public User() {}
+
+    public User(User user) {
+        setEmail(user.getEmail());
+        setFirstName(user.getFirstName());
+        setLastName(user.getLastName());
+        setDateOfBirth(user.getDateOfBirth());
+        setAddress(user.getAddress());
+        setPhoneNumber(user.getPhoneNumber());
+    }
+
     @NotBlank(message = "Email is required")
     @Email(message = "Invalid email format")
     private String email;

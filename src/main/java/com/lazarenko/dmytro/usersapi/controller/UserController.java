@@ -106,21 +106,36 @@ public class UserController {
      * @param email   the email of the user to update
      * @param updates a map containing user attributes to update
      * @return ResponseEntity containing the updated user and associated resources
-     * @throws ResponseStatusException if no user is found with the given email
+     * @throws ResponseStatusException if no user is found with the given email or if the user's age is below the minimum required age
      */
     @PatchMapping("/{email}")
     public ResponseEntity<EntityModel<User>> updateUser(@PathVariable String email, @RequestBody Map<String, Object> updates) {
         User user = findUserByEmail(email);
+        User clone = new User(user);
         updates.forEach((key, value) -> {
             switch (key) {
-                case "email" -> user.setEmail((String) value);
-                case "firstName" -> user.setFirstName((String) value);
-                case "lastName" -> user.setLastName((String) value);
-                case "dateOfBirth" -> user.setDateOfBirth(LocalDate.parse((String) value));
-                case "address" -> user.setAddress((String) value);
-                case "phoneNumber" -> user.setPhoneNumber((String) value);
+                case "email" -> clone.setEmail((String) value);
+                case "firstName" -> clone.setFirstName((String) value);
+                case "lastName" -> clone.setLastName((String) value);
+                case "dateOfBirth" -> {
+                    LocalDate dateOfBirth = LocalDate.parse((String) value);
+                    if (LocalDate.now().minusYears(minimumAge).isBefore(dateOfBirth)) {
+                        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User must be at least " + minimumAge + " years old");
+                    }
+
+                    clone.setDateOfBirth(dateOfBirth);
+                }
+                case "address" -> clone.setAddress((String) value);
+                case "phoneNumber" -> clone.setPhoneNumber((String) value);
             }
         });
+
+        user.setEmail(clone.getEmail());
+        user.setFirstName(clone.getFirstName());
+        user.setLastName(clone.getLastName());
+        user.setDateOfBirth(clone.getDateOfBirth());
+        user.setAddress(clone.getAddress());
+        user.setPhoneNumber(clone.getPhoneNumber());
 
         return ResponseEntity.ok(assembler.toModel(user));
     }
@@ -131,9 +146,14 @@ public class UserController {
      * @param email   the email of the user to replace
      * @param newUser the new user data to replace the old one
      * @return ResponseEntity containing the replaced user and associated resources
+     * @throws ResponseStatusException if the user's age is below the minimum required age
      */
     @PutMapping("/{email}")
-    public ResponseEntity<EntityModel<User>> replaceUser(@PathVariable String email, @RequestBody User newUser) {
+    public ResponseEntity<EntityModel<User>> replaceUser(@PathVariable String email, @Valid @RequestBody User newUser) {
+        if (LocalDate.now().minusYears(minimumAge).isBefore(newUser.getDateOfBirth())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User must be at least " + minimumAge + " years old");
+        }
+
         User updatedUser = users.stream()
                 .filter(user -> user.getEmail().equals(email))
                 .findFirst()
