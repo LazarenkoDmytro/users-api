@@ -11,7 +11,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
-import org.springframework.hateoas.IanaLinkRelations;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -105,11 +104,11 @@ public class UserController {
      *
      * @param email   the email of the user to update
      * @param updates a map containing user attributes to update
-     * @return the updated user
+     * @return ResponseEntity containing the updated user and associated resources
      * @throws ResponseStatusException if no user is found with the given email
      */
     @PatchMapping("/{email}")
-    public User updateUser(@PathVariable String email, @RequestBody Map<String, Object> updates) {
+    public ResponseEntity<EntityModel<User>> updateUser(@PathVariable String email, @RequestBody Map<String, Object> updates) {
         User user = findUserByEmail(email);
         updates.forEach((key, value) -> {
             switch (key) {
@@ -122,7 +121,7 @@ public class UserController {
             }
         });
 
-        return user;
+        return ResponseEntity.ok(assembler.toModel(user));
     }
 
     /**
