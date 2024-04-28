@@ -12,6 +12,11 @@ import java.util.HashMap;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
+/**
+ * Assembles User models into HATEOAS-compliant EntityModel instances.
+ *
+ * @author Dmytro Lazarenko
+ */
 @Component
 public class UserModelAssembler implements RepresentationModelAssembler<User, EntityModel<User>> {
 
