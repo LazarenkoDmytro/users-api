@@ -26,12 +26,12 @@ This will start the application on http://localhost:8080.
 - **Body**:
 
   {<p>
-  &emsp;&emsp;&emsp;&emsp;"email": "john.doe@example.com",<p>
-  &emsp;&emsp;&emsp;&emsp;"firstName": "John",<p>
-  &emsp;&emsp;&emsp;&emsp;"lastName": "Doe",<p>
-  &emsp;&emsp;&emsp;&emsp;"dateOfBirth": "1990-01-01",<p>
-  &emsp;&emsp;&emsp;&emsp;"address": "123 Main St",<p>
-  &emsp;&emsp;&emsp;&emsp;"phoneNumber": "123-456-7890"<p>
+  &emsp;"email": "john.doe@example.com",<p>
+  &emsp;"firstName": "John",<p>
+  &emsp;"lastName": "Doe",<p>
+  &emsp;"dateOfBirth": "1990-01-01",<p>
+  &emsp;"address": "123 Main St",<p>
+  &emsp;"phoneNumber": "123-456-7890"<p>
   }
 
 - **Success Response**:
@@ -63,7 +63,7 @@ This will start the application on http://localhost:8080.
 - **Body**:
 
   {<p>
-  &emsp;&emsp;&emsp;&emsp;"firstName": "Jane"<p>
+  &emsp;"firstName": "Jane"<p>
   }
 
 - **Success Response**:
@@ -78,12 +78,12 @@ This will start the application on http://localhost:8080.
 - **Body**:
 
   {<p>
-  &emsp;&emsp;&emsp;&emsp;"email": "jane.doe@example.com",<p>
-  &emsp;&emsp;&emsp;&emsp;"firstName": "Jane",<p>
-  &emsp;&emsp;&emsp;&emsp;"lastName": "Doe",<p>
-  &emsp;&emsp;&emsp;&emsp;"dateOfBirth": "1990-02-01",<p>
-  &emsp;&emsp;&emsp;&emsp;"address": "123 Main St",<p>
-  &emsp;&emsp;&emsp;&emsp;"phoneNumber": "123-456-7890"<p>
+  &emsp;"email": "jane.doe@example.com",<p>
+  &emsp;"firstName": "Jane",<p>
+  &emsp;"lastName": "Doe",<p>
+  &emsp;"dateOfBirth": "1990-02-01",<p>
+  &emsp;"address": "123 Main St",<p>
+  &emsp;"phoneNumber": "123-456-7890"<p>
   }
 
 - **Success Response**:
